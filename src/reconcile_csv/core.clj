@@ -2,7 +2,7 @@
   (:use [ring.adapter.jetty]
         [ring.middleware.params]
         [compojure.core :only (defroutes GET POST)]
-        [clojure.tools.nrepl.server 
+        [clojure.tools.nrepl.server
          :only (start-server stop-server)]
         )
   (:require [compojure.route :as route]
@@ -19,7 +19,7 @@
 (defn hello [request]
   "this used to say hello world... the index page"
   {:status 200
-   :headers {"Content-Type" "text/html"}
+   :headers {"Content-Type" "text/html;charset=UTF-8"}
    :body (slurp "index.html.tpl")})
 
 (defn encapsulate-jsonp [callback d]
@@ -29,9 +29,9 @@
 (defn json-response [callback d]
   "return a json or jsonp response - with headers and shit"
   {:status 200
-   :headers {"Content-Type" "application/javascript"}
-   :body (if callback 
-           (encapsulate-jsonp callback 
+   :headers {"Content-Type" "application/json;charset=UTF-8"}
+   :body (if callback
+           (encapsulate-jsonp callback
                               (json/write-str d))
            (json/write-str d))})
 
@@ -42,37 +42,37 @@
 (defn four-o-four []
   "the error page"
   {:status 404
-   :headers {"Content-Type" "text/html"}
+   :headers {"Content-Type" "text/html;charset=UTF-8"}
    :body "404 not found"})
 
 (defn service-metadata []
   "returns the service metadata"
-  {:name "CSV Reconciliation service"
-   :identifierSpace "http://localhost:8000/"
-   :schemaSpace "http://localhost:8000/"
+  {:name (:service-name @config)
+   :identifierSpace (:server-name @config)
+   :schemaSpace (:server-name @config)
    :defaultTypes []
    :view  {
-            :url "http://localhost:8000/view/{{id}}"
+            :url (str (:server-name @config) "/view/{{id}}")
             }
    :preview {
-             :url "http://localhost:8000/view/{{id}}"
+             :url (str (:server-name @config) "/view/{{id}}")
              :width 500
              :height 350
              }
    :suggest {
              :entity {
-                      :service_url "http://localhost:8000"
+                      :service_url (:server-name @config)
                       :service_path "/suggest"
-                      :flyout_service_url "http://localhost:8000"
-                      :flyout_sercice_path "/flyout"
+                      :flyout_service_url (:server-name @config)
+                      :flyout_service_path "/flyout"
                       }}})
 
 
-(defn score [^clojure.lang.PersistentVector query 
+(defn score [^clojure.lang.PersistentVector query
              ^clojure.lang.PersistentArrayMap row]
   "calculates the score for a query - which at this stage is a vector of vectors..."
-  (let [fuzzy-match (fn [x] 
-                      (fuzzy/dice (second x) 
+  (let [fuzzy-match (fn [x]
+                      (fuzzy/dice (second x)
                                   (get row (first x))))]
   (->> query
        (map fuzzy-match)
@@ -85,7 +85,7 @@
    :name (get x (:search-column @config))
    :score (:score x)
    :match (if (= (:score x) 1) true false)
-   :type [{"name" "CSV-recon"
+   :type [{"name" (:type-name @config)
            "id" "/csv-recon"}]
    }
   )
@@ -100,7 +100,7 @@
 (defn scores [q json?]
   "calculate the scores for a query"
   (let [query {(:search-column @config)
-               (clojure.string/lower-case 
+               (clojure.string/lower-case
                 (if json? (:query q) q))}
         limit (or (:limit q) 5)
         query (if-let [prop (:properties q)]
@@ -119,7 +119,7 @@
   (let [q (try (json/read-str query :key-fn keyword)
                (catch Exception e query))
         j (if (:query q) true false)
-        ]   
+        ]
   {:result (scores q j)}
   ))
 
@@ -134,9 +134,9 @@
   (let [params (:params request)]
     (json-response (:callback params)
                    (cond
-                    (:query params) (reconcile-param 
+                    (:query params) (reconcile-param
                                      (:query params))
-                    (:queries params) (reconcile-params 
+                    (:queries params) (reconcile-params
                                        (:queries params))
                     :else (service-metadata)))))
 
@@ -148,21 +148,22 @@
   "create a table from an object"
   (str
    "<table>"
-   (clojure.string/join 
+   (clojure.string/join
     ""
-    (map #(str 
+    (map #(str
            "<tr><td><strong>"
             (first %)
             "</strong></td><td>"
             (second %)
             "</td></tr>")
-         o))                    
+         o))
    "</table>"))
 
 (defn view [id]
   "return the view for an id"
   (if-let [o (get-record-by-id id)]
       (str "<html><head>"
+           "<style>table, th, td { border: 1px solid black; } th, td { padding: 5px; }</style>"
            "</head><body>"
            (table-from-object o)
            "</body></html>")
@@ -180,14 +181,14 @@
                     :code "/api/status/ok"
                     :status "200 OK"
                     :prefix prefix
-                    :result (map 
-                             #(assoc % 
-                                :n:type 
+                    :result (map
+                             #(assoc %
+                                :n:type
                                 {:id "/csv-recon"
                                  :name "csv-recon" })
                              (:result (reconcile-param query)))
                     })))
-            
+
 (defn flyout [request]
   "the flyout - what is shown after searches"
   (let [params (:params request)
@@ -196,12 +197,12 @@
     (if-let [o (get-record-by-id id)]
       (json-response callback
                      {:id id
-                      :html (str 
+                      :html (str
                              "<div style='color:#000'><strong>"
                              (get o (:search-column @config))
                              "</strong><br/>"
                              (table-from-object o)
-                             "</div>" 
+                             "</div>"
                              )})
       (four-o-four))))
 
@@ -219,7 +220,7 @@
          (with-meta (map-map clojure.string/lower-case x) x))
        data))
 
-(defroutes routes 
+(defroutes routes
   (GET "/" [] (hello nil))
   (GET "/reconcile" [:as r] (reconcile r))
   (POST "/reconcile" [:as r] (reconcile r))
@@ -233,12 +234,15 @@
 (def app
    (handler/api routes))
 
-(defn -main [file search-column id-column]
+(defn -main [file search-column id-column server-name port-number service-name type-name]
   "main function - start the servers!"
   (defonce server (start-server :port 7888))
   (swap! data (fn [x file] (lcase-data (csv-map/parse-csv (slurp file)))) file)
   (swap! config (fn [x y] (assoc x :search-column y)) search-column)
   (swap! config (fn [x y] (assoc x :id-column y)) id-column)
+  (swap! config (fn [x y] (assoc x :server-name y)) server-name)
+  (swap! config (fn [x y] (assoc x :service-name y)) service-name)
+  (swap! config (fn [x y] (assoc x :type-name y)) type-name)
   (println "Starting CSV Reconciliation service")
-  (println "Point refine to http://localhost:8000 as reconciliation service")
-  (run-jetty app {:port 8000 :join? false}))
+  (println "Point refine to server name e.g. http://localhost:8000 as reconciliation service")
+  (run-jetty app {:port (Integer/parseInt port-number) :join? false}))
