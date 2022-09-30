@@ -1,4 +1,5 @@
 # reconcile-csv
+(a little fork - server address, port, servece name and type name as command line parameters)
 
 A OpenRefine reconciliation service that works from CSV files.
 
@@ -20,15 +21,15 @@ Create a column with Unique-ID's you will use to match.
 
 Pre-compiled:
 ```
-java -Xmx2g -jar reconcile-csv-0.1.2.jar <file> <primary search column> <column with id's>
+java -Xmx2g -jar reconcile-csv-0.1.3.jar <file> <primary search column> <column with id's> <server address> <port> <service name> <type name>
 ```
 
 With Leiningen:
 ```
-lein run <file> <primary search column> <column with id's>
+lein run <file> <primary search column> <column with id's> <server address> <port> <service name> <type name>
 ```
 
-Then add ```http://localhost:8000/reconcile``` as a reconciliation service
+Then add ```<server address>/reconcile``` as a reconciliation service e.g. http://localhost:8000/reconcile
 to refine. You can add more columns through the reconcile-interface in
 Refine. 
 

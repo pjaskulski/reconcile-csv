@@ -1,0 +1,1 @@
+java -Xmx2g -jar reconcile-csv-0.1.3.jar ahp_krakowskie.csv nazwa_16w id_miejscowosci "http://localhost:8000" "8000" "AHP serwis rekoncyliacji" "miejscowość"
