@@ -1,5 +1,5 @@
 # reconcile-csv
-(a little fork - server address, port, servece name and type name as command line parameters)
+(a little fork - server address, port, service name and type name as command line parameters)
 
 A OpenRefine reconciliation service that works from CSV files.
 
